@@ -9,6 +9,7 @@
 #define MYSH_TOK_BUFSIZE 64
 #define MYSH_TOK_DELIM " \t\r\n\a"
 
+
 /*
 Function Declarations for builtin shell commands:
 */
@@ -24,6 +25,12 @@ char *builtin_str[] = {
     "cd",
     "help",
     "exit"
+};
+
+int (*builtin_func[]) (char **) = {
+    &mysh_cd,
+    &mysh_help,
+    &mysh_exit
 };
 
 int mysh_num_builtins() {
@@ -51,7 +58,7 @@ int mysh_help(char **args)
     printf("Frank Rastelli's MYSH\n");
     printf("Type program names and arguments, and hit enter.\n");
     printf("The following are built in:\n");
-
+    
     for (i = 0; i < mysh_num_builtins(); i++) {
         printf(" %s\n", builtin_str[i]);
     }
@@ -68,7 +75,7 @@ int mysh_launch(char **args)
 {
     pid_t pid, wpid;
     int status;
-
+    
     pid = fork();
     if (pid == 0) {
         // Child process
@@ -85,8 +92,25 @@ int mysh_launch(char **args)
             wpid = waitpid(pid, &status, WUNTRACED);
         } while (!WIFEXITED(status) && !WIFSIGNALED(status));
     }
-
+    
     return 1;
+}
+
+int mysh_execute(char **args)
+{
+    int i;
+
+    if (args[0] == NULL) {
+        // An empty command was entered
+        return 1;
+    }
+
+    for (i = 0; i < mysh_num_builtins(); i++) {
+        if (strcmp(args[0], builtin_str[i]) == 0) {
+            return (*builtin_func[i])(args);
+        }
+    }
+    return mysh_launch(args);
 }
 
 char *mysh_read_line(void)
